@@ -1,0 +1,7 @@
+matplotlib==3.3.4
+numpy==1.19.2
+pandas==1.0.5
+pixyz==0.1.2
+rdkit==2009.Q1-1
+scipy==1.5.2
+torch==1.8.1

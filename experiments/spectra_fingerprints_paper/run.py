@@ -7,12 +7,13 @@ import pandas as pd
 import os
 import sys
 import shutil
+import pickle
+from rdkit import Chem
+import argparse
+import copy
 
-from models.MVAE import MVAE
 from models.JMVAE import JMVAE
-from models.SpectraVAE import SpectraVAE
 from models.SpectraVAE_terms import SpectraVAE as SpectraVAE_terms
-from models.SpectraVAE_shared import SpectraVAEShared
 from torch.utils.data.sampler import SubsetRandomSampler
 
 from experiments.spectra_fingerprints_paper.spectra_fingerprints_paper_inference import GeneratorX, GeneratorY, \
@@ -31,7 +32,7 @@ else:
 
 print('Device', device)
 
-kwargs = {'batch_size': batch_size, 'num_workers': 10, 'pin_memory': True}
+kwargs = {'batch_size': batch_size, 'num_workers': 4, 'pin_memory': True}
 
 root = "."
 
@@ -386,10 +387,7 @@ def run_semisupervised(model_obj, no_labels):
     result.to_csv('{}_{}_{}.csv'.format(model_obj.name, no_labels, keyword), index=None)
 
 
-keyword = 'paper_unsupervised_fp_unmerged'
-# keyword = 'paper_unsupervised_casmi'
-# keyword = 'paper_unsupervised_fp_1e4'
-# keyword = 'paper_unsupervised_fp_unmerged_unsup'
+keyword = 'model'
 
 
 class CSVFileDataset(torch.utils.data.dataset.Dataset):
@@ -411,7 +409,7 @@ class CSVFileDataset(torch.utils.data.dataset.Dataset):
         return np.array(parse_spectrum(fs)).astype(np.float32)
 
     def __getitem__(self, idx):
-        return self.parse_spectrum_in(self.X[idx]), np.array(list(map(int, self.y[idx])))[self.indices]
+        return self.parse_spectrum_in(self.X[idx]), np.array(list(map(int, self.y[idx])))[self.indices][0]
 
 
 class FPDataset(torch.utils.data.dataset.Dataset):
@@ -473,7 +471,7 @@ print('Keyword', keyword)
 df_metid_train = pd.read_csv(args['train'])
 df_metid_test = pd.read_csv(args['test'])
 if args['train_molecules']:
-    unsupervised_fp = list(pd.read_csv(args['train_molecules'])['fp'])
+    unsupervised_fp = list(pd.read_csv(args['train_molecules'])['fp_short'])
     is_sup = False
 else:
     is_sup = True
@@ -488,23 +486,23 @@ unsupervised_sampler_x, unsupervised_sampler_y, supervised_sampler = get_sampler
 device = args['device']
 
 train_loader_supervised = torch.utils.data.DataLoader(
-    CSVFileDataset(df_metid_train['spectrum'], df_metid_train['fp']),
+    CSVFileDataset(df_metid_train['spectrum'], df_metid_train['fp_short']),
     sampler=supervised_sampler, **kwargs
 )
 if is_sup or args['model'] == 'JMVAE':
     train_loader_unsupervised_x = torch.utils.data.DataLoader(
-        CSVFileDataset(df_metid_train['spectrum'], df_metid_train['fp']),
+        CSVFileDataset(df_metid_train['spectrum'], df_metid_train['fp_short']),
         sampler=unsupervised_sampler_x, **kwargs
     )
     train_loader_unsupervised_y = torch.utils.data.DataLoader(
-        CSVFileDataset(df_metid_train['spectrum'], df_metid_train['fp']),
+        CSVFileDataset(df_metid_train['spectrum'], df_metid_train['fp_short']),
         sampler=unsupervised_sampler_y, **kwargs
     )
 else:
     train_loader_unsupervised_x = torch.utils.data.DataLoader(
         CSVFileDataset(
             list(df_metid_train['spectrum']),
-            list(df_metid_train['fp']),
+            list(df_metid_train['fp_short']),
         ),
         shuffle=True, **kwargs
     )
@@ -517,15 +515,15 @@ else:
     )
 
 test_loader_supervised = torch.utils.data.DataLoader(
-    CSVFileDataset(df_metid_test['spectrum'], df_metid_test['fp'],),
+    CSVFileDataset(df_metid_test['spectrum'], df_metid_test['fp_short']),
     shuffle=False, **kwargs
 )
 test_loader_unsupervised_x = torch.utils.data.DataLoader(
-    CSVFileDataset(df_metid_test['spectrum'], df_metid_test['fp']),
+    CSVFileDataset(df_metid_test['spectrum'], df_metid_test['fp_short']),
     shuffle=False, **kwargs
 )
 test_loader_unsupervised_y = torch.utils.data.DataLoader(
-    CSVFileDataset(df_metid_test['spectrum'], df_metid_test['fp']),
+    CSVFileDataset(df_metid_test['spectrum'], df_metid_test['fp_short']),
     shuffle=False, **kwargs
 )
 
@@ -559,8 +557,7 @@ def init_model(model_class):
 
 model_obj = init_model(model_class)
 
-no_labels = int(is_sup)
-print('No labels', no_labels)
+print('Is supervised', bool(is_sup))
 
 if args['eval']:
     name = args['load']

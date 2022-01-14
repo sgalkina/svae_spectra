@@ -628,9 +628,9 @@ def get_samplers(N_data):
 
 ap = argparse.ArgumentParser()
 
-ap.add_argument("-t", "--train", required=True, help="Train set, a csv file with comma as delimiter, required columns 'spectrum' and 'SMILES'")
-ap.add_argument("-v", "--test", required=True, help="Test set, a csv file with comma as delimiter, required columns 'spectrum' and 'SMILES'")
-ap.add_argument("-u", "--train_molecules", required=False, help="Unsupervised molecule train set. If not provided, the algorithm runs in supervised mode")
+ap.add_argument("-t", "--train", required=True, help="Train set, a csv file with comma as delimiter, required columns 'spectrum' and 'SMILES' ('fp_short' if training with the fingerprints)")
+ap.add_argument("-v", "--test", required=True, help="Test set, a csv file with comma as delimiter, required columns 'spectrum' and 'SMILES' ('fp_short' if training with the fingerprints)")
+ap.add_argument("-u", "--train_molecules", required=False, help="Unsupervised molecule train set, required columns 'SMILES'. If not provided, the algorithm runs in supervised mode")
 ap.add_argument("-m", "--model", required=True, help="Model name (SVAE or JMVAE). JMVAE only runs in supervised mode even if train_molecules provided")
 ap.add_argument("-k", "--keyword", required=False, default='molecules', help="Additional keyword for the trained model name. Default 'molecules'")
 ap.add_argument("-l", "--load", required=False, help="Trained model name to evaluate or continue the training")
@@ -733,7 +733,7 @@ def init_model(model_class):
 model_obj = init_model(model_class)
 
 no_labels = int(is_sup)
-print('No labels', no_labels)
+print('Is supervised', bool(no_labels))
 
 if args['eval']:
     name = args['load']

@@ -2,7 +2,12 @@
 Source code for the paper "Bi-modal Variational Autoencoders for Metabolite Identification Using Tandem Mass Spectrometry"
 
 Source code for training and evaluating SVAE and JMVAE models is provided for spectra-SMILES and spectra-fingerprints case.
-`data` folder contains the list of spectra identifiers used for training and testing.
+`data` folder contains the list of spectra identifiers used for training and testing and the example data for demonstrating the required format for testing and training.
+`experiments` folder contains the code for spectra preprocessing, model training and testing.
+`models` folder contains the bimodal VAE model classes.
+
+`data/train_ids.txt` is a list of MoNA and NIST identifiers used for training in the paper evaluations.
+`data/test_ids.txt` is a list of MoNA and NIST identifiers used for testing in the paper evaluations.
 
 ```
 usage: run.py [-h] -t TRAIN -v TEST [-u TRAIN_MOLECULES] -m MODEL [-k KEYWORD]
@@ -35,15 +40,15 @@ optional arguments:
 
 Example of training the JMVAE model for fingerprints in supervised mode:
 ```
-python experiments/spectra_fingerprints_paper/run.py --train train.csv --test test.csv --model JMVAE --device cuda:0
+python experiments/spectra_fingerprints_paper/run.py --train data/train.csv --test data/test.csv --model JMVAE --device cuda:0
 ```
 
 Example of training the SVAE model for SMILES in semi-supervised mode:
 ```
-python experiments/spectra/run.py --train train.csv --test test.csv --train_molecules unsupervised.csv --model SVAE --device cuda:0
+python experiments/spectra/run.py --train data/train.csv --test data/test.csv --train_molecules data/unsupervised.csv --model SVAE --device cuda:0
 ```
 
 Example of evaluating the trained SVAE model for SMILES:
 ```
-python experiments/spectra/run.py --train train.csv --test test.csv --load trained_model..pth.tar --model SVAE --device cuda:0 --eval
+python experiments/spectra/run.py --train train.csv --test data/test.csv --load trained_model.pth.tar --model SVAE --device cuda:0 --eval
 ```
